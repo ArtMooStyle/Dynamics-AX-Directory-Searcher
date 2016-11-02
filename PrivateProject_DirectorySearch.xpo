@@ -1,0 +1,247 @@
+﻿Exportfile for AOT version 1.0 or later
+Formatversion: 1
+
+***Element: JOB
+
+; Microsoft Dynamics AX Job: TEST_DryRuDirectorySearcher выгружен
+; --------------------------------------------------------------------------------
+  JOBVERSION 1
+  
+  SOURCE #TEST_DryRuDirectorySearcher
+    #static void TEST_DryRuDirectorySearcher(Args _args)
+    #{
+    #    DryRuDirectorySearcher       searcher;
+    #    List                        ldapField;
+    #    MapEnumerator                      me;
+    #    ;
+    #    ldapField = new List(Types::String);
+    #
+    #    ldapField.addEnd('SAMAccountName');
+    #    ldapField.addEnd('mail');
+    #
+    #    searcher = DryRuDirectorySearcher::construct("LDAP://drylock.local", "(&(objectCategory=person)(objectClass=user))",ldapField);
+    #    searcher.run();
+    #
+    #    me = Map::create(searcher.getData()).getEnumerator();
+    #
+    #    while (me.moveNext())
+    #    {
+    #        info(strfmt("%1",conpeek(me.currentValue(),1)));
+    #    }
+    #}
+  ENDSOURCE
+
+***Element: CLS
+
+; Microsoft Dynamics AX Class: DryRuDirectorySearcher выгружен
+; --------------------------------------------------------------------------------
+  CLSVERSION 1
+  
+  CLASS #DryRuDirectorySearcher
+    Id 50382
+    PROPERTIES
+      Name                #DryRuDirectorySearcher
+      Extends             #
+      RunOn               #Called from
+    ENDPROPERTIES
+    
+    METHODS
+      Version: 3
+      SOURCE #classDeclaration
+        #class DryRuDirectorySearcher
+        #{
+        #    System.DirectoryServices.DirectoryEntry                 ldapConnection;
+        #    System.DirectoryServices.DirectorySearcher              searcher;
+        #    System.DirectoryServices.SearchResultCollection         searchResultCollection;
+        #    System.DirectoryServices.SearchResult                   searchResult;
+        #    System.DirectoryServices.DirectoryEntry                 entry;
+        #    System.DirectoryServices.PropertyCollection             propertyCollection;
+        #    System.DirectoryServices.PropertyValueCollection        propertyValueCollection;
+        #
+        #    str                                                     domain;
+        #    str                                                     searchFilter;
+        #    int                                                     searchCount, i, length;
+        #
+        #    Map                                                     data;
+        #    List                                                    userFields;
+        #
+        #    InteropPermission                                       interopPermission;
+        #}
+      ENDSOURCE
+      SOURCE #getData
+        #container getData()
+        #{;
+        #    return data.pack();
+        #}
+      ENDSOURCE
+      SOURCE #init
+        #void init(str _domain)
+        #{
+        #    ;
+        #    new InteropPermission(InteropKind::ClrInterop).assert();
+        #    try
+        #    {
+        #        ldapConnection  = new System.DirectoryServices.DirectoryEntry(_domain);
+        #        searcher        = new System.DirectoryServices.DirectorySearcher(ldapConnection);
+        #    }
+        #    catch (Exception::CLRError)
+        #    {
+        #        throw error("@SYS117735");
+        #    }
+        #}
+      ENDSOURCE
+      SOURCE #initFilter
+        #void initFilter(str _searchFilter, List _userFields)
+        #{;
+        #    searcher.set_Filter(_searchFilter);
+        #    userFields = _userFields;
+        #}
+      ENDSOURCE
+      SOURCE #initMap
+        #void initMap()
+        #{;
+        #    data = new Map(Types::String, Types::Container);
+        #}
+      ENDSOURCE
+      SOURCE #run
+        #void run()
+        #{
+        #    ;
+        #    new InteropPermission(InteropKind::ClrInterop).assert();
+        #
+        #    try
+        #    {
+        #        searchResultCollection = searcher.FindAll();
+        #        searchCount = searchResultCollection.get_Count();
+        #
+        #        for (i = 0; i < searchCount; i++)
+        #        {
+        #            searchResult = searchResultCollection.get_Item(i);
+        #            entry = searchResult.GetDirectoryEntry();
+        #
+        #            if (entry)
+        #            {
+        #                propertyCollection = entry.get_Properties();
+        #            }
+        #
+        #            if (!propertyCollection)
+        #            {
+        #                entry.Dispose();
+        #                continue;
+        #            }
+        #
+        #            this.writeInfo();
+        #
+        #            entry.Dispose();
+        #
+        #            searchResultCollection.Dispose();
+        #         }
+        #    }
+        #    catch (Exception::CLRError)
+        #    {
+        #        info(CLRInterop::getLastException().ToString());
+        #        throw error(strFmt("@SYS117734"));
+        #
+        #    }
+        #
+        #
+        #
+        #
+        #
+        #
+        #}
+      ENDSOURCE
+      SOURCE #writeInfo
+        #void writeInfo()
+        #{
+        #    ListEnumerator                                   le;
+        #    str                 curField, userName,curFieldData;
+        #    container                                   dataCon;
+        #    int                                      conNum = 1;
+        #    ;
+        #
+        #    le = userFields.getEnumerator();
+        #
+        #    propertyValueCollection = propertyCollection.get_Item('sAMAccountName');
+        #
+        #    if (PropertyValueCollection)
+        #    {
+        #        if (PropertyValueCollection.get_Value())
+        #        {
+        #            userName = propertyValueCollection.get_Value();
+        #        }
+        #    }
+        #
+        #    while (le.moveNext())
+        #    {
+        #        curField = le.current();
+        #
+        #        propertyValueCollection = propertyCollection.get_Item(curField);
+        #
+        #        if (PropertyValueCollection)
+        #        {
+        #            if (PropertyValueCollection.get_Value())
+        #            {
+        #                curFieldData = propertyValueCollection.get_Value();
+        #                dataCon = conIns(dataCon,conNum,curFieldData);
+        #            }
+        #            else
+        #            {
+        #                dataCon = conIns(dataCon,conNum," ");
+        #            }
+        #        }
+        #
+        #        conNum++;
+        #    }
+        #
+        #    data.insert(userName,dataCon);
+        #}
+      ENDSOURCE
+      SOURCE #construct
+        #client static DryRuDirectorySearcher construct(str _domain, str _searchFilter, List _fieldsList)
+        #{
+        #    DryRuDirectorySearcher      searcher;
+        #    ;
+        #    searcher = new DryRuDirectorySearcher();
+        #
+        #    searcher.init(_domain);
+        #    searcher.initFilter(_searchFilter, _fieldsList);
+        #    searcher.initMap();
+        #
+        #    return searcher;
+        #}
+      ENDSOURCE
+    ENDMETHODS
+  ENDCLASS
+
+***Element: PRN
+
+; Microsoft Dynamics AX Project : DirectorySearch unloaded
+; --------------------------------------------------------------------------------
+  PROJECTVERSION 2
+  
+  PROJECT #DirectorySearch
+   PRIVATE
+  PROPERTIES
+    Name                #DirectorySearch
+  ENDPROPERTIES
+  
+    PROJECTCLASS ProjectNode
+    BEGINNODE
+      FILETYPE 0
+      UTILTYPE 5
+      UTILOBJECTID 0
+      NODETYPE 215
+      NAME #TEST_DryRuDirectorySearcher
+    ENDNODE
+    BEGINNODE
+      FILETYPE 0
+      UTILTYPE 45
+      UTILOBJECTID 50382
+      NODETYPE 329
+      NAME #DryRuDirectorySearcher
+    ENDNODE
+  ENDPROJECT
+  
+
+***Element: END
